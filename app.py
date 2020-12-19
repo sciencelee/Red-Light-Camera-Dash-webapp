@@ -28,7 +28,7 @@ today_str = "{}-{}-{}T00:00:00.000".format(today.year, today.month, today.day)  
 
 red_cam = client.get("spqx-js37",  # speed cams are at 'hhkd-xvj4'
                        where="violation_date BETWEEN '{}' AND '{}'".format(year_ago_today, today_str),
-                       limit=1000,
+                       limit=5000000,
                        )
 
 # Convert to pandas DataFrame
@@ -42,10 +42,13 @@ results_df['month'] = results_df['violation_date'].apply(lambda x: x.month)
 results_df['weekday'] = results_df['violation_date'].apply(lambda x: datetime.weekday(x))
 results_df['year'] = results_df['violation_date'].apply(lambda x: x.year)
 
-df_plot = results_df.groupby(['camera_id', 'intersection', 'latitude', 'longitude', 'address', 'month', 'weekday', 'year'], as_index=True)[
-    'violations'].sum().reset_index()
-df_plot['lat'] = df_plot['latitude'].apply(lambda x: '{:.2f}'.format(x))
-df_plot['long'] = df_plot['longitude'].apply(lambda x: '{:.2f}'.format(x))
+
+df_plot = results_df.groupby(['camera_id'])['violations'].sum().reset_index()
+
+#results_df['latitude'] = results_df['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['latitude'].mode())
+#results_df['longitude'] = results_df['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['longitude'].mode())
+#results_df['intersection']= results_df['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['intersection'].mode())
+
 
 # fig = px.scatter_geo(results_df.groupby('camera_id').sum(), locations="iso_alpha",
 #                      color="violations", # which column to use to set the color of markers
@@ -54,23 +57,22 @@ df_plot['long'] = df_plot['longitude'].apply(lambda x: '{:.2f}'.format(x))
 #                      projection="natural earth")
 
 # px.scatter_mapbox?
-fig = px.scatter_mapbox(df_plot,
+fig = px.scatter_mapbox(results_df,
                         lat="latitude",
                         lon="longitude",
-                        color="violations",
+                        color='violations',
                         hover_name='intersection',
-                        size='violations',
                         # label=['lat','long','violations'],
-
-                        color_continuous_scale='BlueRed',
-                        # range_color=[1000, 20000],
+                        color_continuous_scale='rdylgn_r',
+                        range_color=[results_df['violations'].quantile(0.2), results_df['violations'].quantile(0.8)],
                         # center={'lat':41.975605, 'lon': -87.731670},
                         zoom=9.5,
                         opacity=0.6,
                         height=700,
                         custom_data=['camera_id', 'weekday', 'month', 'year'],  #send in what you like this way (behind the scenes, sneaky!)
-                        hover_data={'violations': True, 'longitude': ':.2f', 'latitude': ':.2f'},
+                        hover_data={'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
                         )
+
 fig.update_layout(mapbox_style="stamen-toner")
 
 # month plot
@@ -155,7 +157,6 @@ app.layout = html.Div([
         ], className="six columns"),
 
         html.Div([
-            html.H3('Column 2'),
             dcc.Graph(id='map', figure=fig)
         ], className="six columns"),
     ], className="row"),
@@ -188,6 +189,8 @@ def update_style(clickData):
         return dash.no_update
     cam_id = clickData['points'][0]['customdata'][0]
     cam_df = results_df[results_df['camera_id']==cam_id]
+    cam_df['intersection'] = cam_df['intersection'].apply(lambda x: x.title())
+
 
     # stats
     intersection = cam_df['intersection'].iloc[0]
@@ -199,18 +202,20 @@ def update_style(clickData):
     df_plot = cam_df.groupby(['violation_date', 'weekday'])['violations'].sum().reset_index()
     #weekdays = ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat']
     df_plot['weekday'] = df_plot['weekday'].apply(lambda x: weekdays[x])
-    df_plot['violation_date'] = df_plot['violation_date'].apply(lambda x: datetime(x, )
+    df_plot['violation_date'] = df_plot['violation_date'].apply(lambda x:  x.strftime("%m/%d/%Y"))
 
     new_fig = px.bar(df_plot, x='violation_date', y='violations', hover_data=['violation_date', 'weekday', 'violations'])
 
     return html.Div([
-                    dcc.Graph(figure=new_fig),
+
                     html.Table([
                         html.Tr('Camera ID: {}'.format(cam_id)),
                         html.Tr('Intersection: {}'.format(intersection)),
-                        html.Tr('Mean Daily Violations: {}'.format(daily_mean)),
-                        html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations*100)),
-                    ])
+                        html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
+                        html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations*100)),]
+                    ),
+                    dcc.Graph(figure=new_fig),
+
                     ]
                     )
 
