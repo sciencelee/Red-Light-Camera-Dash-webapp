@@ -148,7 +148,7 @@ body {
  /* currently ems cause chrome bug misinterpreting rems on body element */
   line-height: 1.6;
   font-weight: 400;
-  color: rgb(50, 50, 50);
+  color: rgb(100, 100, 100);
 }
 
 /* Typography –––––––––––––––––––––––––––––––––––––––––––––––––– */
@@ -631,4 +631,9 @@ a {
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
   background: #d8d8d870 !important;
+}
+
+#my-graph {
+    background: transparent;
+    padding: 20px;
 }

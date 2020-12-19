@@ -23,12 +23,14 @@ client = Socrata("data.cityofchicago.org", None)
 # First 'limit' results, returned as JSON from API / converted to Python list of
 # dictionaries by sodapy.
 today=datetime.today()
+two_year_ago_today = year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 1, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 today_str = "{}-{}-{}T00:00:00.000".format(today.year, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 
+# THIS IS WHERE WE GRAB OUR DATASET
 red_cam = client.get("spqx-js37",  # speed cams are at 'hhkd-xvj4'
                        where="violation_date BETWEEN '{}' AND '{}'".format(year_ago_today, today_str),
-                       limit=5000000,
+                       limit=5000,
                        )
 
 # Convert to pandas DataFrame
@@ -45,10 +47,12 @@ results_df['year'] = results_df['violation_date'].apply(lambda x: x.year)
 
 df_plot = results_df.groupby(['camera_id'])['violations'].sum().reset_index()
 
-#results_df['latitude'] = results_df['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['latitude'].mode())
-#results_df['longitude'] = results_df['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['longitude'].mode())
-#results_df['intersection']= results_df['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['intersection'].mode())
-
+df_plot['latitude'] = df_plot['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['latitude'].mode())
+print('lat')
+df_plot['longitude'] = df_plot['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['longitude'].mode())
+print('long')
+df_plot['intersection']= df_plot['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['intersection'].mode())
+print('intersection')
 
 # fig = px.scatter_geo(results_df.groupby('camera_id').sum(), locations="iso_alpha",
 #                      color="violations", # which column to use to set the color of markers
@@ -57,19 +61,19 @@ df_plot = results_df.groupby(['camera_id'])['violations'].sum().reset_index()
 #                      projection="natural earth")
 
 # px.scatter_mapbox?
-fig = px.scatter_mapbox(results_df,
+fig = px.scatter_mapbox(df_plot,
                         lat="latitude",
                         lon="longitude",
                         color='violations',
                         hover_name='intersection',
                         # label=['lat','long','violations'],
                         color_continuous_scale='rdylgn_r',
-                        range_color=[results_df['violations'].quantile(0.2), results_df['violations'].quantile(0.8)],
+                        range_color=[df_plot['violations'].quantile(0.2), df_plot['violations'].quantile(0.8)],
                         # center={'lat':41.975605, 'lon': -87.731670},
                         zoom=9.5,
                         opacity=0.6,
                         height=700,
-                        custom_data=['camera_id', 'weekday', 'month', 'year'],  #send in what you like this way (behind the scenes, sneaky!)
+                        custom_data=['camera_id'],  #send in what you like this way (behind the scenes, sneaky!)
                         hover_data={'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
                         )
 
@@ -128,6 +132,7 @@ def generate_table(dataframe, max_rows=26):
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']  # default styling from tutorials
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+#app = dash.Dash(__name__)
 
 
 
@@ -135,33 +140,38 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 
 app.layout = html.Div([
-    html.Label('Map Style'),
-    dcc.Dropdown(
-        id='mapstyle-val',
-        className='select columns',
-        options=[
-            {'label': 'Stamen-toner', 'value': 'stamen-toner'},
-            {'label': 'Open-street-map', 'value': 'open-street-map'},
-            {'label': 'Carto-positron', 'value': 'carto-positron'},
-
-        ],
-        value='stamen-toner'
-    ),
-
-    html.Div([
+        html.Div([
 
         html.Div([
-            html.H3(id='title1', children=['Column 1']),
-            dcc.Graph(id='stats', figure=fig_sub),
+            html.H3(id='title1', children="select a red light camera from map"),
+            #dcc.Graph(id='stats', figure=fig_sub),
 
         ], className="six columns"),
 
         html.Div([
-            dcc.Graph(id='map', figure=fig)
-        ], className="six columns"),
-    ], className="row"),
-    html.Div([html.H3('Aaron Lee: (c)2020')])
-])
+                #html.Label('Map Style'),
+                html.Div(
+                    dcc.Dropdown(
+                            id='mapstyle-val',
+                            className='select columns',
+                            options=[
+                                    {'label': 'Stamen-toner', 'value': 'stamen-toner'},
+                                    {'label': 'Open-street-map', 'value': 'open-street-map'},
+                                    {'label': 'Carto-positron', 'value': 'carto-positron'},
+
+                                    ],
+                            value='stamen-toner'
+                            ),
+                        className='div-for-dropdown'),
+                html.Div(
+                        dcc.Graph(id='map', figure=fig),
+                        className='my-graph'
+                )
+                ], className="six columns"),
+        ], className="row"),
+    html.Div([html.H3('Aaron Lee: (c)2020')]),
+], style={}
+)
 
 
 @app.callback(
@@ -179,7 +189,7 @@ def update_style(value):
 
 @app.callback(Output('title1', 'children'),  # output goes to id:map and attribute:figure (which is my fig map)
                 Input('map', 'clickData'))  # mapstyle-val is my button label, value is the data of teh item clicked
-def update_style(clickData):
+def update_map(clickData):
     '''
     My second callback with Dash. Yay!
     callback (INPUT) triggers this function
@@ -188,33 +198,46 @@ def update_style(clickData):
     if not clickData:
         return dash.no_update
     cam_id = clickData['points'][0]['customdata'][0]
+    print(cam_id)
     cam_df = results_df[results_df['camera_id']==cam_id]
-    cam_df['intersection'] = cam_df['intersection'].apply(lambda x: x.title())
+    print(len(cam_df))
+    #cam_df['intersection'] = cam_df['intersection'].apply(lambda x: cam_df['intersection'][0].title())
 
 
     # stats
     intersection = cam_df['intersection'].iloc[0]
     daily_mean = cam_df['violations'].mean()
-    year_ago = datetime.now() - relativedelta(years=1)
+    year_ago = datetime.today() - relativedelta(years=1)
+    print(year_ago.date())
+    #cam_df['violation_date'] = cam_df['violation_date'].apply(lambda x: x.date())
     annual_violations = cam_df[cam_df['violation_date'] >= year_ago]['violations'].sum()
-
     # graph
-    df_plot = cam_df.groupby(['violation_date', 'weekday'])['violations'].sum().reset_index()
-    #weekdays = ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat']
-    df_plot['weekday'] = df_plot['weekday'].apply(lambda x: weekdays[x])
-    df_plot['violation_date'] = df_plot['violation_date'].apply(lambda x:  x.strftime("%m/%d/%Y"))
+    df_new = cam_df.groupby('violation_date')['violations'].sum().reset_index()
 
-    new_fig = px.bar(df_plot, x='violation_date', y='violations', hover_data=['violation_date', 'weekday', 'violations'])
+    #weekdays = ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat']
+    #df_new['weekday'] = cam_df['weekday'].apply(lambda x: weekdays[x])
+    # df_new['violation_date'] = df_new['violation_date'].apply(lambda x:  x.strftime("%m/%d/%Y"))
+    #
+    # base = datetime.today()
+    # date_list = [base - datetime.timedelta(days=x) for x in range(365)]
+    #
+    # for date in date_list:
+    #     if date not in df_new['violation_date']:
+    #         df_new.append({'violation_date':date, 'violations':0})
+
+
+    new_fig = px.bar(df_new, x='violation_date', y='violations')
+    #new_fig.update_traces
 
     return html.Div([
 
                     html.Table([
                         html.Tr('Camera ID: {}'.format(cam_id)),
-                        html.Tr('Intersection: {}'.format(intersection)),
+                        html.Tr('Intersection: {}'.format(intersection.title())),
                         html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
                         html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations*100)),]
                     ),
-                    dcc.Graph(figure=new_fig),
+                    dcc.Graph(figure=new_fig, className='my-graph'),
 
                     ]
                     )
