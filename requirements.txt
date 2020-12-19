@@ -1,6 +1,6 @@
-dash
-plotly
-pandas
-sodapy
-python-dateutil
+dash~=1.18.1
+plotly~=4.14.1
+pandas~=1.1.5
+sodapy~=2.1.0
+python-dateutil~=2.8.1
 gunicorn
