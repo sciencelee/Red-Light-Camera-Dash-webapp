@@ -22,13 +22,17 @@ client = Socrata("data.cityofchicago.org", None)
 # First 'limit' results, returned as JSON from API / converted to Python list of
 # dictionaries by sodapy.
 today=datetime.today()
-two_year_ago_today = year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
+six_mos_ago = today - relativedelta(month=6)
+six_mos_ago = "{}-{}-{}T00:00:00.000".format(six_mos_ago.year, six_mos_ago.month, six_mos_ago.day)  #"violation_date": "2014-07-01T00:00:00.000",
+
+
+two_year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 1, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 today_str = "{}-{}-{}T00:00:00.000".format(today.year, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 
 # THIS IS WHERE WE GRAB OUR DATASET
 red_cam = client.get("spqx-js37",  # speed cams are at 'hhkd-xvj4'
-                       where="violation_date BETWEEN '{}' AND '{}'".format(year_ago_today, today_str),
+                       where="violation_date BETWEEN '{}' AND '{}'".format(six_mos_ago, today_str),
                        limit=1000000,
                        )
 
@@ -215,9 +219,11 @@ def update_map(clickData):
     intersection = cam_df['intersection'].iloc[0]
     daily_mean = cam_df['violations'].mean()
     year_ago = datetime.today() - relativedelta(years=1)
+    six_ago = datetime.today() - relativedelta(month=6)
+
     print(year_ago.date())
     #cam_df['violation_date'] = cam_df['violation_date'].apply(lambda x: x.date())
-    annual_violations = cam_df[cam_df['violation_date'] >= year_ago]['violations'].sum()
+    annual_violations = cam_df[cam_df['violation_date'] >= six_ago]['violations'].sum()
     # graph
     df_new = cam_df.groupby('violation_date')['violations'].sum().reset_index()
 
@@ -242,7 +248,7 @@ def update_map(clickData):
                         html.Tr('Camera ID: {}'.format(cam_id)),
                         html.Tr('Intersection: {}'.format(intersection.title())),
                         html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
-                        html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations*100)),]
+                        html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations*100*2)),]
                     ),
                     dcc.Graph(figure=new_fig, className='my-graph'),
 
