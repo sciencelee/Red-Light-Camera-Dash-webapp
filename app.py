@@ -64,7 +64,7 @@ print('intersection')
 #                      projection="natural earth")
 
 # px.scatter_mapbox?
-#df_plot['size']=df_plot['violations'].apply(lambda x: 8)
+df_plot['size']=df_plot['violations'].apply(lambda x: 8)
 
 fig = px.scatter_mapbox(df_plot,
                         lat="latitude",
@@ -79,7 +79,7 @@ fig = px.scatter_mapbox(df_plot,
                         opacity=0.6,
                         height=700,
                         custom_data=['camera_id'],  #send in what you like this way (behind the scenes, sneaky!)
-                        #size='size',
+                        size='size',
                         hover_data={'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
                         size_max=8,
                         )
