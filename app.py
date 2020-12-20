@@ -219,7 +219,7 @@ def update_map(clickData):
     intersection = cam_df['intersection'].iloc[0]
     daily_mean = cam_df['violations'].mean()
     year_ago = datetime.today() - relativedelta(years=1)
-    six_ago = datetime.today() - relativedelta(month=6)
+    six_ago = datetime.today() - relativedelta(month=6)  #new add
 
     print(year_ago.date())
     #cam_df['violation_date'] = cam_df['violation_date'].apply(lambda x: x.date())
