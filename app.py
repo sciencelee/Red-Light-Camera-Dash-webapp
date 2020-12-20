@@ -80,7 +80,7 @@ fig = px.scatter_mapbox(df_plot,
                         height=700,
                         custom_data=['camera_id'],  #send in what you like this way (behind the scenes, sneaky!)
                         size='size',
-                        hover_data={'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
+                        hover_data={'size':False, 'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
                         size_max=8,
                         )
 
