@@ -60,7 +60,7 @@ print('intersection')
 #                      projection="natural earth")
 
 # px.scatter_mapbox?
-df_plot['size']=df_plot['violations'].apply(lambda x: 8)
+#df_plot['size']=df_plot['violations'].apply(lambda x: 8)
 
 fig = px.scatter_mapbox(df_plot,
                         lat="latitude",
@@ -75,18 +75,13 @@ fig = px.scatter_mapbox(df_plot,
                         opacity=0.6,
                         height=700,
                         custom_data=['camera_id'],  #send in what you like this way (behind the scenes, sneaky!)
-                        size='size',
-                        hover_data={'size': False, 'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
+                        #size='size',
+                        hover_data={'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
                         size_max=8,
                         )
 
-fig.update_layout(title_text='Chicago Red Light Cameras',
-                mapbox_style="open-street-map",
-                  margin={"r":0,"t":0,"l":0,"b":0},
-                  mapbox=dict(
-                      pitch=0,
-                      bearing=0
-                  ))
+fig.update_layout(mapbox_style="open-street-map")
+
 
 
 # month plot
@@ -142,7 +137,7 @@ def generate_table(dataframe, max_rows=26):
 # CREATE APP
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']  # default styling from tutorials
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-server = app.server
+#server = app.server
 
 #app = dash.Dash(__name__)
 
@@ -256,4 +251,4 @@ def update_map(clickData):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
