@@ -30,7 +30,7 @@ today_str = "{}-{}-{}T00:00:00.000".format(today.year, today.month, today.day)  
 # THIS IS WHERE WE GRAB OUR DATASET
 red_cam = client.get("spqx-js37",  # speed cams are at 'hhkd-xvj4'
                        where="violation_date BETWEEN '{}' AND '{}'".format(year_ago_today, today_str),
-                       limit=5000000,
+                       limit=1000000,
                        )
 
 # Convert to pandas DataFrame
@@ -246,4 +246,4 @@ def update_map(clickData):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
