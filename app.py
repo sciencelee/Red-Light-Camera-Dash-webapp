@@ -167,7 +167,7 @@ app.layout = html.Div([
                                     {'label': 'Carto-positron', 'value': 'carto-positron'},
 
                                     ],
-                            value='Open-street-map'
+                            value='open-street-map'
                             ),
                         className='div-for-dropdown'),
                 html.Div(
