@@ -3,7 +3,6 @@
 
 import json
 import dash
-import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
@@ -70,14 +69,23 @@ fig = px.scatter_mapbox(df_plot,
                         color_continuous_scale='rdylgn_r',
                         range_color=[df_plot['violations'].quantile(0.2), df_plot['violations'].quantile(0.8)],
                         # center={'lat':41.975605, 'lon': -87.731670},
-                        zoom=9.5,
+                        zoom=9.6,
                         opacity=0.6,
                         height=700,
                         custom_data=['camera_id'],  #send in what you like this way (behind the scenes, sneaky!)
-                        hover_data={'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
+                        hover_data={'size':False, 'camera_id':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
+                        size=[8 for x in range(len(df_plot['camera_id']))],
+                        size_max=8,
                         )
 
-fig.update_layout(mapbox_style="stamen-toner")
+fig.update_layout(title_text='Chicago Red Light Cameras',
+                mapbox_style="open-street-map",
+                  margin={"r":0,"t":0,"l":0,"b":0},
+                  mapbox=dict(
+                      pitch=0,
+                      bearing=0
+                  ))
+
 
 # month plot
 df_month = results_df.groupby(['month'])['violations'].sum().reset_index()
@@ -129,7 +137,7 @@ def generate_table(dataframe, max_rows=26):
     )
 
 
-
+# CREATE APP
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']  # default styling from tutorials
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
@@ -140,7 +148,7 @@ server = app.server
 
 
 
-
+# CREATE THE APP LAYOUT
 app.layout = html.Div([
         html.Div([
 
