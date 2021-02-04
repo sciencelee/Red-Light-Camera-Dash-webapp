@@ -12,7 +12,12 @@ from sodapy import Socrata
 from datetime import datetime
 from plotly.subplots import make_subplots
 from dateutil.relativedelta import relativedelta
+import timeit
 
+
+# would like to time this.  I only have 30s to load first time
+# my_time = timeit.Timer()
+# print(my_time.)
 
 # get my data
 # Unauthenticated client only works with public data sets. Note 'None'
@@ -26,22 +31,36 @@ six_mos_ago = today - relativedelta(month=6)
 six_mos_ago = "{}-{}-{}T00:00:00.000".format(six_mos_ago.year, six_mos_ago.month, six_mos_ago.day)  #"violation_date": "2014-07-01T00:00:00.000",
 
 
-two_year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
+#two_year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 1, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 today_str = "{}-{}-{}T00:00:00.000".format(today.year, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 
 # THIS IS WHERE WE GRAB OUR DATASET
 red_cam = client.get("spqx-js37",  # speed cams are at 'hhkd-xvj4'
-                       where="violation_date BETWEEN '{}' AND '{}'".format(six_mos_ago, today_str),
+                       where="violation_date BETWEEN '{}' AND '{}'".format(year_ago_today, today_str),
                        limit=1000000,
                        )
+print('red cam data loaded')
+
+# Crash Data
+crash_data = client.get("85ca-t3if",
+                     where='''(crash_date BETWEEN '{}' AND '{}')
+                           '''.format(year_ago_today, today_str),
+
+                     limit=1000000,
+                    )
+print('crash data loaded')
+
+crash_df = pd.DataFrame.from_records(crash_data) # Convert to pandas DataFrame
+
+
 
 # Convert to pandas DataFrame
 results_df = pd.DataFrame.from_records(red_cam)
 
-results_df['violations'] = results_df['violations'].apply(int)
-results_df['latitude'] = results_df['latitude'].apply(float)
-results_df['longitude'] = results_df['longitude'].apply(float)
+results_df['violations'] = results_df['violations'].astype(int)
+results_df['latitude'] = results_df['latitude'].astype(float)
+results_df['longitude'] = results_df['longitude'].astype(float)
 results_df['violation_date'] = pd.to_datetime(results_df['violation_date'])
 results_df['month'] = results_df['violation_date'].apply(lambda x: x.month)
 results_df['weekday'] = results_df['violation_date'].apply(lambda x: datetime.weekday(x))
