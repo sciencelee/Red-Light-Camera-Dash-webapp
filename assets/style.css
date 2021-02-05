@@ -13,4 +13,9 @@ tr {
     font-size: 0.6em;
 }
 
+.left {
+    flex: 2;
+
+}
+
 

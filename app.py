@@ -81,7 +81,8 @@ fig = px.scatter_mapbox(df_plot,
                         # center={'lat':41.975605, 'lon': -87.731670},
                         zoom=9.6,
                         opacity=0.8,
-                        height=700,
+                        height=600,
+                        width=600,
                         custom_data=['intersection', 'violations'],  #send in what you like this way (behind the scenes, sneaky!)
                         size='size',
                         hover_data={'size':False, 'intersection':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
@@ -151,12 +152,12 @@ server = app.server
 # CREATE MY APP LAYOUT
 # format is html.Tag([])   They are just lists of html elements to produce webpage nesting
 app.layout = html.Div([  # one big div for page
-                    html.H2(id='title', children="Chicago Red Light Camera Accident Study"),
+                    html.H3(id='title', children="Chicago Red Light Camera Accident Study"),
                     html.Div([   # Big middle block split in two
                         html.Div([  # This is my left half div
                                 html.H3(id='stats', children="select a red light camera from map"),
 
-                                ], className="flex-child"),
+                                ], className="flex-child left"),
                         html.Div([
                                 html.Div(
                                     dcc.Dropdown(  # dropdown selector for my map.  Might remove this
@@ -176,7 +177,7 @@ app.layout = html.Div([  # one big div for page
                                         className='my-graph'
                                         )
 
-                                ], className="flex-child",
+                                ], className="flex-child right",
                                 ),
                             ], className='flex-container')
                     ])
@@ -222,21 +223,25 @@ def update_map(clickData):
     crashes = get_crashes(intersection, year_ago_today, today_str, int_chars)
 
     # stats for violations
-    daily_mean = annual_violations['violations'].mean()
+    daily_mean = annual_violations['violations'].sum()/365
     annual_violations['violation_date'] = pd.DatetimeIndex(annual_violations.violation_date).strftime("%Y-%m-%d")
     annual_violations['MA5'] = annual_violations.violations.rolling(5).mean()
+
+    # stats for crashes
+    total_crashes = crashes['crash_record_id'].count()
 
     # make violations graph
     new_fig = px.bar(annual_violations,
                      x='violation_date',
                      y='violations',
                      title='Daily Violations: {}'.format(intersection),
+                     height=500,
                      )
     new_fig.add_trace(go.Scatter(x=annual_violations['violation_date'],
                                  y=annual_violations['MA5'],
                                  mode='lines',
                                  name='5 day moving avg.',
-                                 line_color='orange'))
+                                 line_color='red',))
 
     # make crash graph
 
@@ -245,10 +250,10 @@ def update_map(clickData):
                                  mode='markers',
                                  name='Crashes',
                                  marker=dict(
-                                     color='red',
+                                     color='cyan',
                                      size=10,
                                      line=dict(
-                                         color='purple',
+                                         color='black',
                                          width=1
                                      )
                                  ),
@@ -282,7 +287,10 @@ def update_map(clickData):
                     html.Table([
                         html.Tr('Intersection: {}'.format(intersection)),
                         html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
-                        html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),]
+                        html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),
+                        html.Tr('Crashes in past year: {}'.format(total_crashes)),
+
+                                ]
                     ),
                     dcc.Graph(figure=new_fig, className='my-graph violations'),
                     ]
