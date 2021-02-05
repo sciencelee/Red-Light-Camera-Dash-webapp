@@ -76,10 +76,11 @@ fig = px.scatter_mapbox(df_plot,
                         hover_name='intersection',
                         # label=['lat','long','violations'],
                         color_continuous_scale='rdylgn_r',
+                        #color_continuous_scale='Plotly3',
                         range_color=[df_plot['violations'].quantile(0), df_plot['violations'].quantile(0.95)],
                         # center={'lat':41.975605, 'lon': -87.731670},
                         zoom=9.6,
-                        opacity=0.6,
+                        opacity=0.8,
                         height=700,
                         custom_data=['intersection', 'violations'],  #send in what you like this way (behind the scenes, sneaky!)
                         size='size',
@@ -87,7 +88,7 @@ fig = px.scatter_mapbox(df_plot,
                         size_max=8,
                         )
 
-fig.update_layout(mapbox_style="open-street-map")
+fig.update_layout(mapbox_style="carto-positron")
 
 
 
@@ -150,61 +151,63 @@ server = app.server
 # CREATE MY APP LAYOUT
 # format is html.Tag([])   They are just lists of html elements to produce webpage nesting
 app.layout = html.Div([  # one big div for page
-        html.Div([
+                    html.H2(id='title', children="Chicago Red Light Camera Accident Study"),
+                    html.Div([   # Big middle block split in two
+                        html.Div([  # This is my left half div
+                                html.H3(id='stats', children="select a red light camera from map"),
 
-        html.Div([
-            html.H3(id='title1', children="select a red light camera from map"),
-            #dcc.Graph(id='stats', figure=fig_sub),
+                                ], className="flex-child"),
+                        html.Div([
+                                html.Div(
+                                    dcc.Dropdown(  # dropdown selector for my map.  Might remove this
+                                            id='mapstyle-val',
+                                            className='select columns',
+                                            options=[
+                                                    {'label': 'Stamen-toner', 'value': 'stamen-toner'},
+                                                    {'label': 'Open-street-map', 'value': 'open-street-map'},
+                                                    {'label': 'Carto-positron', 'value': 'carto-positron'},
+                                                    {'label': 'Stamen-watercolor', 'value': "stamen-watercolor"},
+                                                    ],
+                                            value="stamen-toner",
+                                            ),
+                                        ),
+                                html.Div(  # this is my div that contains my map.  look to css to change size etc.
+                                        dcc.Graph(id='map', figure=fig),
+                                        className='my-graph'
+                                        )
 
-        ], className="six columns"),  # six columns is from my style sheet
+                                ], className="flex-child",
+                                ),
+                            ], className='flex-container')
+                    ])
 
-        html.Div([
-                #html.Label('Map Style'),
-                html.Div(
-                    dcc.Dropdown(  # dropdown selector for my map.  Might remove this
-                            id='mapstyle-val',
-                            className='select columns',
-                            options=[
-                                    {'label': 'Stamen-toner', 'value': 'stamen-toner'},
-                                    {'label': 'Open-street-map', 'value': 'open-street-map'},
-                                    {'label': 'Carto-positron', 'value': 'carto-positron'},
 
-                                    ],
-                            value='open-street-map'
-                            ),
-                        className='div-for-dropdown'),
+# use rows here so we have display above, and footer below.
 
-                html.Div(  # this is my div that contains my map.  look to my-graph css to change size etc.
-                        dcc.Graph(id='map', figure=fig),
-                        className='my-graph'
-                )
 
-                ], className="six columns"),
-        ], className="row"),  # use rows here so we have display above, and footer below.
-    html.Div([html.H3('Aaron Lee: (c)2020')]),  # same level as big div
-], style={}
-)
+#    html.Div([html.H3('Aaron Lee: (c)2020')]) # same level as big div
+
 
 
 
 # THIS IS A CALLBACK TO UPDATE THE MAP BACKGROUND (MY FIRST ATTEMPT IN DASH)
-@app.callback(
-    Output('map', 'figure'),  # output goes to id:map and attribute:figure (which is my fig map)
-    Input('mapstyle-val', 'value'))  # mapstyle-val is my button label, value is the selection
-def update_style(value):
-    '''
-    My first callback with Dash.
-    callback (INPUT) triggers this function
-    function returns to the output location (in this case the Graph figure
-    '''
-    fig.update_layout(mapbox_style=value)  # change the map style and kick it back
-    return fig
+# @app.callback(
+#     Output('map', 'figure'),  # output goes to id:map and attribute:figure (which is my fig map)
+#     Input('mapstyle-val', 'value'))  # mapstyle-val is my button label, value is the selection
+# def update_style(value):
+#     '''
+#     My first callback with Dash.
+#     callback (INPUT) triggers this function
+#     function returns to the output location (in this case the Graph figure
+#     '''
+#     fig.update_layout(mapbox_style=value)  # change the map style and kick it back
+#     return fig
 
 
 
 # THIS CALLBACK UPDATES THE MAP WHEN YOU CLICK AN INTERSECTION
-@app.callback(Output('title1', 'children'),  # output goes to id:map and attribute:figure (which is my fig map)
-                Input('map', 'clickData'))  # mapstyle-val is my button label, value is the data of teh item clicked
+@app.callback(Output('stats', 'children'),  # output goes to id:map and attribute:figure (which is my fig map)
+                Input('map', 'clickData')) # mapstyle-val is my button label, value is the data of teh item clicked
 def update_map(clickData):
     '''
     My second callback with Dash. Yay!
@@ -215,44 +218,58 @@ def update_map(clickData):
         return dash.no_update
     intersection = clickData['points'][0]['customdata'][0]
     print(intersection)
-    annual_violations = get_violations(intersection, year_ago_today, today_str, int_chars)  # RIGHT HERE!!!!!! Use client query
-    print(annual_violations.intersection)
+    annual_violations = get_violations(intersection, year_ago_today, today_str, int_chars)  # Sql query funcs go here
+    crashes = get_crashes(intersection, year_ago_today, today_str, int_chars)
 
-
-    # stats
+    # stats for violations
     daily_mean = annual_violations['violations'].mean()
-    #year_ago = datetime.today() - relativedelta(years=1)
-
-    #print(year_ago.date())
-    #annual_violations['violation_date'] = annual_violations['violation_date'].apply(lambda x: str(x)[:-13])
-    print(annual_violations.violation_date.head())
-
     annual_violations['violation_date'] = pd.DatetimeIndex(annual_violations.violation_date).strftime("%Y-%m-%d")
-    print(annual_violations.info())
-
-    # graph
-    #df_new = annual_violations.groupby('violation_date')['violations'].sum().reset_index()
-
-    #weekdays = ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat']
-    #df_new['weekday'] = cam_df['weekday'].apply(lambda x: weekdays[x])
-    # df_new['violation_date'] = df_new['violation_date'].apply(lambda x:  x.strftime("%m/%d/%Y"))
-    #
-    # base = datetime.today()
-    # date_list = [base - datetime.timedelta(days=x) for x in range(365)]
-    #
-    # for date in date_list:
-    #     if date not in df_new['violation_date']:
-    #         df_new.append({'violation_date':date, 'violations':0})
-
     annual_violations['MA5'] = annual_violations.violations.rolling(5).mean()
+
+    # make violations graph
     new_fig = px.bar(annual_violations,
                      x='violation_date',
                      y='violations',
-                     title='Daily Violations: {}'.format(intersection))
+                     title='Daily Violations: {}'.format(intersection),
+                     )
     new_fig.add_trace(go.Scatter(x=annual_violations['violation_date'],
                                  y=annual_violations['MA5'],
                                  mode='lines',
-                                 name='5 day moving avg'))
+                                 name='5 day moving avg.',
+                                 line_color='orange'))
+
+    # make crash graph
+
+    new_fig.add_trace(go.Scatter(x=crashes['crash_date'],
+                                y=crashes['crash_record_id'],
+                                 mode='markers',
+                                 name='Crashes',
+                                 marker=dict(
+                                     color='red',
+                                     size=10,
+                                     line=dict(
+                                         color='purple',
+                                         width=1
+                                     )
+                                 ),
+                                 )
+                      )
+
+
+    new_fig.update_layout(legend=dict(
+        yanchor="top",
+        y=0.99,
+        xanchor="left",
+        x=0.01,
+        orientation='h',
+        font=dict(
+            family="Helvetica",
+            size=10,
+            color="black"
+        ),
+    ))
+
+    # stats for crashes
 
 
 
@@ -267,8 +284,7 @@ def update_map(clickData):
                         html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
                         html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),]
                     ),
-                    dcc.Graph(figure=new_fig, className='my-graph'),
-
+                    dcc.Graph(figure=new_fig, className='my-graph violations'),
                     ]
                     )
 

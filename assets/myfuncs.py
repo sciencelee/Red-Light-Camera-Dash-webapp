@@ -36,6 +36,47 @@ def get_violations(intersection, start_date, today_str, int_chars):
     #results_df['year'] = results_df['violation_date'].apply(lambda x: x.year)
     return results_df
 
+def get_crashes(intersection, start_date, today_str, int_chars):
+    # load my violations data and preprocess
+    # returned as JSON from API / converted to Python list of ictionaries by sodapy.
+    box_side = 100  # effectively makes it check for crash being within 40m of intersection
+    box_lat = box_side / 111070 / 2  # 111070 is meters in deg lat in Chicago
+    box_long = box_side / 83000 / 2  # 83000 is meters in deg long in Chicago
+
+    crash_data = client.get("85ca-t3if",
+                            select='*',
+                            where='''crash_date BETWEEN "{}" AND "{}"
+                                    AND latitude BETWEEN {} AND {}
+                                    AND longitude BETWEEN {} AND {} 
+                                    AND traffic_control_device = "TRAFFIC SIGNAL"
+                                    AND intersection_related_i = "Y"
+                                    '''.format(start_date,
+                                               today_str,
+                                               int_chars[intersection]['lat'] - box_lat,
+                                               int_chars[intersection]['lat'] + box_lat,
+                                               int_chars[intersection]['long'] - box_long,
+                                               int_chars[intersection]['long'] + box_long,
+                                               ),
+                            limit=10000,
+                            )
+
+    results_df = pd.DataFrame.from_records(crash_data)  # Convert to pandas DataFrame
+
+    print('crash data loaded')
+    results_df['crash_date'] = pd.DatetimeIndex(results_df.crash_date).strftime("%Y-%m-%d")
+    #results_df['month'] = results_df.apply(lambda x: x.month)
+    #results_df['year'] = results_df.apply(lambda x: x.year)
+
+    results_df = results_df.groupby('crash_date').agg({'crash_record_id':'count', 'injuries_total':'sum'}).reset_index()
+
+    #results_df['violations'] = results_df['violations'].astype(int)
+    #results_df['violation_date'] = pd.to_datetime(results_df['violation_date'])
+    #results_df['month'] = results_df['violation_date'].apply(lambda x: x.month)
+    #results_df['weekday'] = results_df['violation_date'].apply(lambda x: datetime.weekday(x))
+    #results_df['year'] = results_df['violation_date'].apply(lambda x: x.year)
+    return results_df
+
+
 
 def cams_to_intersections(cams_df, int_chars):
     cams_df['latitude'] = cams_df['intersection'].apply(lambda x: int_chars[x]['lat'])
