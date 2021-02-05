@@ -8,6 +8,14 @@
     border: 2px solid black;
     padding:10px;
 }
+.table-container {
+    display: flex;
+}
+
+.table-flex {
+    flex: 1;
+    padding:10px;
+}
 
 tr {
     font-size: 0.6em;
@@ -15,6 +23,14 @@ tr {
 
 .left {
     flex: 2;
+
+}
+table {
+    margin: 10px;
+}
+
+.tiny-map {
+    flex: 1;
 
 }
 

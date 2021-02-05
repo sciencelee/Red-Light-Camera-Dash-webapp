@@ -6,13 +6,13 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-import plotly.express as px
+#import plotly.express as px
 from plotly.subplots import make_subplots
 from dateutil.relativedelta import relativedelta
 import timeit
 from assets.myfuncs import *
 from assets.int_chars import *
-import plotly.graph_objects as go
+#import plotly.graph_objects as go
 
 
 # load my intersection data
@@ -89,7 +89,13 @@ fig = px.scatter_mapbox(df_plot,
                         size_max=8,
                         )
 
-fig.update_layout(mapbox_style="carto-positron")
+fig.update_layout(mapbox_style="carto-positron",
+                  margin=go.layout.Margin(l=0, #left margin
+                                            r=0, #right margin
+                                            b=0, #bottom margin
+                                            t=0, #top margin
+                                            )
+                  )
 
 
 
@@ -152,7 +158,7 @@ server = app.server
 # CREATE MY APP LAYOUT
 # format is html.Tag([])   They are just lists of html elements to produce webpage nesting
 app.layout = html.Div([  # one big div for page
-                    html.H3(id='title', children="Chicago Red Light Camera Accident Study"),
+                    html.H3(id='title', children="Chicago Red Light Camera Accident Study (Aaron Lee 2021)"),
                     html.Div([   # Big middle block split in two
                         html.Div([  # This is my left half div
                                 html.H3(id='stats', children="select a red light camera from map"),
@@ -179,8 +185,10 @@ app.layout = html.Div([  # one big div for page
 
                                 ], className="flex-child right",
                                 ),
-                            ], className='flex-container')
-                    ])
+                            ], className='flex-container'),
+                        ],
+            style = {'height': '100vh'},
+            )
 
 
 # use rows here so we have display above, and footer below.
@@ -219,27 +227,28 @@ def update_map(clickData):
         return dash.no_update
     intersection = clickData['points'][0]['customdata'][0]
     print(intersection)
+
     annual_violations = get_violations(intersection, year_ago_today, today_str, int_chars)  # Sql query funcs go here
     crashes = get_crashes(intersection, year_ago_today, today_str, int_chars)
 
     # stats for violations
     daily_mean = annual_violations['violations'].sum()/365
-    annual_violations['violation_date'] = pd.DatetimeIndex(annual_violations.violation_date).strftime("%Y-%m-%d")
-    print(annual_violations.info())
-    annual_violations = annual_violations.groupby(['violation_date', 'latitude', 'longitude'])['violations'].sum().reset_index()
-    annual_violations['MA5'] = annual_violations.violations.rolling(5, min_periods=1).mean()
+
 
     # stats for crashes
     total_crashes = crashes['crash_record_id'].count()
-    total_injuries = crashes['injuries_total'].count()
+    total_injuries = crashes['injuries_total'].sum()
+    total_incap = crashes['injuries_incapacitating'].sum()
 
     # make violations graph
     new_fig = px.bar(annual_violations,
                      x='violation_date',
                      y='violations',
-                     title='Daily Violations: {}'.format(intersection),
+                     title='Daily Violations: {}'.format(intersection.upper()),
                      height=500,
+                     hover_data=['weekday'],
                      )
+
     new_fig.add_trace(go.Scatter(x=annual_violations['violation_date'],
                                  y=annual_violations['MA5'],
                                  mode='lines',
@@ -265,36 +274,63 @@ def update_map(clickData):
 
 
     new_fig.update_layout(legend=dict(
-        yanchor="top",
-        y=0.99,
-        xanchor="left",
-        x=0.01,
-        orientation='h',
-        font=dict(
-            family="Helvetica",
-            size=10,
-            color="black"
-        ),
-    ))
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                orientation='h',
+                font=dict(
+                    family="Helvetica",
+                    size=10,
+                    color="black"
+                        ),
+                ),
+            margin = go.layout.Margin(l=20,  # left margin
+                                  r=20,  # right margin
+                                  b=20,  # bottom margin
+                                  t=30,  # top margin
+                                  )
+            )
 
+    # make the tiny map
+    lat = int_df[int_df['intersection'] == intersection]['lat'].values[0]
+    long = int_df[int_df['intersection'] == intersection]['long'].values[0]
 
+    print("LAT???", type(lat))
+    tinymap = get_tinymap(lat, long)
 
     #new_fig.update_traces
 
     # Now return my div containing my graph (dcc.Graph) along with my table data
     return html.Div([
+                    html.Div([
 
-                    html.Table([
-                        html.Tr('Intersection: {}'.format(intersection)),
-                        html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
-                        html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),
-                        html.Tr('Crashes in past year: {}'.format(total_crashes)),
-                        html.Tr('Injuries in past year: {}'.format(total_injuries)),
+                        html.Table([
+                                    html.Tr([html.Td('{}'.format(intersection.upper()))]),
+                                    html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
+                                    html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),
+                                    html.Tr('Crashes: {}'.format(total_crashes)),
+                                    html.Tr('Injuries: {}'.format(total_injuries)),
+                                    html.Tr('Incapacitating Injuries: {}'.format(total_incap)),
+                                    ], className='table-flex'
+                                    ),
 
-                                ]
+                        html.Table([
+                                    html.Tr([html.Td('{}'.format(intersection.upper()))]),
+                                    html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
+                                    html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum() * 100)),
+                                    html.Tr('Crashes: {}'.format(total_crashes)),
+                                    html.Tr('Injuries: {}'.format(total_injuries)),
+                                    html.Tr('Incapacitating Injuries: {}'.format(total_incap)),
+                                    ], className='table-flex'
+                                    ),
+
+                        dcc.Graph(figure=tinymap, className='tiny-map flex-child')
+                        ],
+                        className='stats-table table-container'
                     ),
-                    dcc.Graph(figure=new_fig, className='my-graph violations'),
-                    ]
+                    dcc.Graph(figure=new_fig, className='my-graph violations')]
+                    ,
                     )
 
 
