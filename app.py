@@ -225,10 +225,13 @@ def update_map(clickData):
     # stats for violations
     daily_mean = annual_violations['violations'].sum()/365
     annual_violations['violation_date'] = pd.DatetimeIndex(annual_violations.violation_date).strftime("%Y-%m-%d")
-    annual_violations['MA5'] = annual_violations.violations.rolling(5).mean()
+    print(annual_violations.info())
+    annual_violations = annual_violations.groupby(['violation_date', 'latitude', 'longitude'])['violations'].sum().reset_index()
+    annual_violations['MA5'] = annual_violations.violations.rolling(5, min_periods=1).mean()
 
     # stats for crashes
     total_crashes = crashes['crash_record_id'].count()
+    total_injuries = crashes['injuries_total'].count()
 
     # make violations graph
     new_fig = px.bar(annual_violations,
@@ -274,9 +277,6 @@ def update_map(clickData):
         ),
     ))
 
-    # stats for crashes
-
-
 
 
     #new_fig.update_traces
@@ -289,6 +289,7 @@ def update_map(clickData):
                         html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
                         html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),
                         html.Tr('Crashes in past year: {}'.format(total_crashes)),
+                        html.Tr('Injuries in past year: {}'.format(total_injuries)),
 
                                 ]
                     ),

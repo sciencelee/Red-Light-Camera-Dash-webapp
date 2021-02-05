@@ -30,6 +30,7 @@ def get_violations(intersection, start_date, today_str, int_chars):
     results_df['violations'] = results_df['violations'].astype(int)
     results_df['latitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['lat'])
     results_df['longitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['long'])
+
     #results_df['violation_date'] = pd.to_datetime(results_df['violation_date'])
     #results_df['month'] = results_df['violation_date'].apply(lambda x: x.month)
     #results_df['weekday'] = results_df['violation_date'].apply(lambda x: datetime.weekday(x))
