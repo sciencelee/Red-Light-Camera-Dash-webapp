@@ -198,7 +198,7 @@ app.layout = html.Div([  # one big div for page
                                                             ],
                                                     value="1y",
                                                     ),
-                                             html.H6("Aaron Lee {} 2021".format(u"\u00A9"))
+                                             html.H6("Aaron M. Lee {} 2021".format(u"\u00A9"))
                                             ], className='flex-container'),
 
                                 ], className="flex-child right",
