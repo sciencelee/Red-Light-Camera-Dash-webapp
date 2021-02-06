@@ -317,10 +317,10 @@ def update_map(intersection, time_delta):
                                 name='Crashes',
                                 customdata=crashes[['crash_date', 'first_crash_type', 'injuries_total', 'weather_condition', 'damage']],
                                 marker=dict(
-                                     color='cyan',
-                                     size=10,
+                                     color='orchid',
+                                     size=8,
                                      line=dict(
-                                            color='black',
+                                            color='darkorchid',
                                             width=1
                                               )
                                         ),
