@@ -2,10 +2,10 @@
 # by Aaron Lee
 
 import json
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output
+# import dash
+# import dash_core_components as dcc
+# import dash_html_components as html
+# from dash.dependencies import Input, Output
 #import plotly.express as px
 from plotly.subplots import make_subplots
 from dateutil.relativedelta import relativedelta
@@ -13,12 +13,15 @@ import timeit
 from assets.myfuncs import *
 from assets.int_chars import *
 #import plotly.graph_objects as go
+from datetime import date
 
 
 # load my intersection data
 int_chars.keys()
 int_df = pd.DataFrame.from_dict(int_chars, orient='index')
 int_df['intersection'] = int_chars.keys()
+int_df = add_traffic(int_df)
+
 
 
 
@@ -30,7 +33,7 @@ today=datetime.today()
 one_mos_ago = today - relativedelta(month=1) # for testing
 one_mos_ago = "{}-{}-{}T00:00:00.000".format(one_mos_ago.year, one_mos_ago.month, one_mos_ago.day)
 
-six_mos_ago = today - relativedelta(month=6)
+six_mos_ago = today - relativedelta(180)
 six_mos_ago = "{}-{}-{}T00:00:00.000".format(six_mos_ago.year, six_mos_ago.month, six_mos_ago.day)  #"violation_date": "2014-07-01T00:00:00.000",
 #two_year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 1, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
@@ -82,7 +85,6 @@ fig = px.scatter_mapbox(df_plot,
                         zoom=9.6,
                         opacity=0.8,
                         height=600,
-                        width=600,
                         custom_data=['intersection', 'violations'],  #send in what you like this way (behind the scenes, sneaky!)
                         size='size',
                         hover_data={'size':False, 'intersection':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
@@ -93,7 +95,7 @@ fig.update_layout(mapbox_style="carto-positron",
                   margin=go.layout.Margin(l=0, #left margin
                                             r=0, #right margin
                                             b=0, #bottom margin
-                                            t=0, #top margin
+                                            t=10, #top margin
                                             )
                   )
 
@@ -158,30 +160,46 @@ server = app.server
 # CREATE MY APP LAYOUT
 # format is html.Tag([])   They are just lists of html elements to produce webpage nesting
 app.layout = html.Div([  # one big div for page
-                    html.H3(id='title', children="Chicago Red Light Camera Accident Study (Aaron Lee 2021)"),
+                    html.Div(id='time-value', style={'display': 'none'}, children='one year'),  # place to store my time interval value
+                    html.Div(id='intersection-value', style={'display': 'none'}, children='CICERO AND I55'), # place to store my intersection value
+
+                    # Real page starts here
+                    html.H3(id='title', children="Chicago Red Light Camera Accident Study"),
                     html.Div([   # Big middle block split in two
                         html.Div([  # This is my left half div
                                 html.H3(id='stats', children="select a red light camera from map"),
 
                                 ], className="flex-child left"),
                         html.Div([
-                                html.Div(
-                                    dcc.Dropdown(  # dropdown selector for my map.  Might remove this
-                                            id='mapstyle-val',
-                                            className='select columns',
-                                            options=[
-                                                    {'label': 'Stamen-toner', 'value': 'stamen-toner'},
-                                                    {'label': 'Open-street-map', 'value': 'open-street-map'},
-                                                    {'label': 'Carto-positron', 'value': 'carto-positron'},
-                                                    {'label': 'Stamen-watercolor', 'value': "stamen-watercolor"},
-                                                    ],
-                                            value="stamen-toner",
-                                            ),
-                                        ),
-                                html.Div(  # this is my div that contains my map.  look to css to change size etc.
+                                    html.Div(  # this is my div that contains my map.  look to css to change size etc.
                                         dcc.Graph(id='map', figure=fig),
                                         className='my-graph'
-                                        )
+                                        ),
+                                     html.Div([
+                                            dcc.Dropdown(  # dropdown selector for my map.  Might remove this
+                                                    id='mapstyle-val',
+                                                    className='select columns',
+                                                    options=[
+                                                            {'label': 'Stamen-toner', 'value': 'stamen-toner'},
+                                                            {'label': 'Open-street-map', 'value': 'open-street-map'},
+                                                            {'label': 'Carto-positron', 'value': 'carto-positron'},
+                                                            ],
+                                                    value="carto-positron",
+                                                    ),
+
+                                            dcc.RadioItems(  # dropdown selector for my map.  Might remove this
+                                                    id='timeframe-val',
+                                                    className='select columns',
+                                                    options=[
+                                                            {'label': 'Three Month', 'value': "3m"},
+                                                            {'label': 'Six Months', 'value': "6m"},
+                                                            {'label': 'One Year', 'value': '1y'},
+                                                            {'label': 'Two Years', 'value': '2y'},
+                                                            ],
+                                                    value="1y",
+                                                    ),
+                                             html.H6("Aaron Lee {} 2021".format(u"\u00A9"))
+                                            ], className='flex-container'),
 
                                 ], className="flex-child right",
                                 ),
@@ -199,79 +217,117 @@ app.layout = html.Div([  # one big div for page
 
 
 
-# THIS IS A CALLBACK TO UPDATE THE MAP BACKGROUND (MY FIRST ATTEMPT IN DASH)
-# @app.callback(
-#     Output('map', 'figure'),  # output goes to id:map and attribute:figure (which is my fig map)
-#     Input('mapstyle-val', 'value'))  # mapstyle-val is my button label, value is the selection
-# def update_style(value):
-#     '''
-#     My first callback with Dash.
-#     callback (INPUT) triggers this function
-#     function returns to the output location (in this case the Graph figure
-#     '''
-#     fig.update_layout(mapbox_style=value)  # change the map style and kick it back
-#     return fig
 
 
+#THIS IS A CALLBACK TO UPDATE THE MAP BACKGROUND (MY FIRST ATTEMPT IN DASH)
+@app.callback(
+    Output('map', 'figure'),  # output goes to id:map and attribute:figure (which is my fig map)
+    Input('mapstyle-val', 'value'))  # mapstyle-val is my button label, value is the selection
+def update_style(value):
+    '''
+    My first callback with Dash.
+    callback (INPUT) triggers this function
+    function returns to the output location (in this case the Graph figure
+    '''
+    fig.update_layout(mapbox_style=value)  # change the map style and kick it back
+    return fig
 
-# THIS CALLBACK UPDATES THE MAP WHEN YOU CLICK AN INTERSECTION
+
+@app.callback(Output('intersection-value', 'children'),
+              Input('map', 'clickData'))
+def write_intersection(clickData):
+     # write intersection to div
+     if not clickData:
+         return dash.no_update
+     intersection = clickData['points'][0]['customdata'][0]
+     print(intersection)
+     return intersection
+
+
+@app.callback(Output('time-value', 'children'),
+              Input('timeframe-val', 'value'))
+def write_time(value):
+     # write intersection to div
+     # if not value:
+     #     return dash.no_update
+     return value
+
+
+# THIS CALLBACK UPDATES THE MAP WHEN YOU CLICK AN INTERSECTION oringal data commented out
+# @app.callback(Output('stats', 'children'),  # output goes to id:map and attribute:figure (which is my fig map)
+#                 Input('map', 'clickData')) # mapstyle-val is my button label, value is the data of teh item clicked
 @app.callback(Output('stats', 'children'),  # output goes to id:map and attribute:figure (which is my fig map)
-                Input('map', 'clickData')) # mapstyle-val is my button label, value is the data of teh item clicked
-def update_map(clickData):
+                Input('intersection-value', 'children'),  # mapstyle-val is my button label, value is the data of teh item clicked
+                Input('time-value', 'children'))
+def update_map(intersection, time_delta):
     '''
     My second callback with Dash. Yay!
     callback (INPUT) triggers this function
     function returns to the output location (in this case the Graph figure
     '''
-    if not clickData:
-        return dash.no_update
-    intersection = clickData['points'][0]['customdata'][0]
-    print(intersection)
+    today = datetime.now()
+    start_time = None
 
-    annual_violations = get_violations(intersection, year_ago_today, today_str, int_chars)  # Sql query funcs go here
-    crashes = get_crashes(intersection, year_ago_today, today_str, int_chars)
+    if time_delta == '2y':
+        start_time =  "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
+    elif time_delta == '1y':
+        start_time =  "{}-{}-{}T00:00:00.000".format(today.year - 1, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
+    elif time_delta == '3m':
+        three_mos_ago = today - relativedelta(months=3)
+        start_time = "{}-{}-{}".format(three_mos_ago.year, three_mos_ago.month, three_mos_ago.day)
+    elif time_delta == '6m':
+        six_mos_ago = today - relativedelta(months=6)
+        start_time = "{}-{}-{}".format(six_mos_ago.year, six_mos_ago.month, six_mos_ago.day)
 
-    # stats for violations
-    daily_mean = annual_violations['violations'].sum()/365
 
+    today_str = "{}-{}-{}T00:00:00.000".format(today.year, today.month, today.day)  # "violation_date": "2014-07-01T00:00:00.000",
 
-    # stats for crashes
-    total_crashes = crashes['crash_record_id'].count()
-    total_injuries = crashes['injuries_total'].sum()
-    total_incap = crashes['injuries_incapacitating'].sum()
+    annual_violations = get_violations(intersection, start_time, today_str, int_chars)  # Sql query funcs go here
+    crashes = get_crashes(intersection, start_time, today_str, int_chars)
+
 
     # make violations graph
     new_fig = px.bar(annual_violations,
                      x='violation_date',
                      y='violations',
-                     title='Daily Violations: {}'.format(intersection.upper()),
-                     height=500,
+                     #title='Daily Violations: {}'.format(intersection.upper()),
+                     height=400,
                      hover_data=['weekday'],
+
                      )
 
     new_fig.add_trace(go.Scatter(x=annual_violations['violation_date'],
                                  y=annual_violations['MA5'],
                                  mode='lines',
+                                 hoverinfo='skip',
                                  name='5 day moving avg.',
                                  line_color='red',))
 
     # make crash graph
+    hover_list = ["Date: %{customdata[0]}",
+                    "Crash Type: %{customdata[1]}",
+                    "Injuries: %{customdata[2]}",
+                    "Weather Cond: %{customdata[3]}",
+                    "Damage: %{customdata[4]}"]
 
-    new_fig.add_trace(go.Scatter(x=crashes['crash_date'],
+    new_fig.add_trace(go.Scatter(
+                                x=crashes['crash_date'],
                                 y=crashes['crash_record_id'],
-                                 mode='markers',
-                                 name='Crashes',
-                                 marker=dict(
+                                mode='markers',
+                                name='Crashes',
+                                customdata=crashes[['crash_date', 'first_crash_type', 'injuries_total', 'weather_condition', 'damage']],
+                                marker=dict(
                                      color='cyan',
                                      size=10,
                                      line=dict(
-                                         color='black',
-                                         width=1
-                                     )
-                                 ),
-                                 )
+                                            color='black',
+                                            width=1
+                                              )
+                                        ),
+                                hovertemplate="<br>".join(hover_list)
+                                        )
                       )
-
+    #new_fig.update_traces(hovertemplate="<br>".join(hover_list))
 
     new_fig.update_layout(legend=dict(
                 yanchor="top",
@@ -292,46 +348,68 @@ def update_map(clickData):
                                   )
             )
 
-    # make the tiny map
-    lat = int_df[int_df['intersection'] == intersection]['lat'].values[0]
-    long = int_df[int_df['intersection'] == intersection]['long'].values[0]
 
-    print("LAT???", type(lat))
-    tinymap = get_tinymap(lat, long)
+
+    tinymap = get_tinymap(int_df, intersection)
 
     #new_fig.update_traces
+    table1, table2 = stats_table(annual_violations, crashes, int_df, intersection)
+
 
     # Now return my div containing my graph (dcc.Graph) along with my table data
-    return html.Div([
-                    html.Div([
+    # i made a diagram with numbered box model for this
+    return html.Div([  # Big div on my left side
 
-                        html.Table([
-                                    html.Tr([html.Td('{}'.format(intersection.upper()))]),
-                                    html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
-                                    html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),
-                                    html.Tr('Crashes: {}'.format(total_crashes)),
-                                    html.Tr('Injuries: {}'.format(total_injuries)),
-                                    html.Tr('Incapacitating Injuries: {}'.format(total_incap)),
-                                    ], className='table-flex'
-                                    ),
+                    html.Div([ # div to contain grouping of intersection/title, stats-flextables, and tinymap flex 1
+                            html.Div([  # 2 flex cont
+                                    html.Div([  # 3 flex child
+                                            html.H5(intersection),
+                                            html.Div([ # 5 flex cont
+                                                    html.Div(table1, className='flex-child'),  #6 flex child with table in it
+                                                    html.Div(table2, className='flex-child')  #7 flex child with table in it
+                                                    ], className='flex-container flex-child')
+                                            ], className='flex-child flex2'),
 
-                        html.Table([
-                                    html.Tr([html.Td('{}'.format(intersection.upper()))]),
-                                    html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
-                                    html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum() * 100)),
-                                    html.Tr('Crashes: {}'.format(total_crashes)),
-                                    html.Tr('Injuries: {}'.format(total_injuries)),
-                                    html.Tr('Incapacitating Injuries: {}'.format(total_incap)),
-                                    ], className='table-flex'
-                                    ),
+                                    dcc.Graph(figure=tinymap, className='tinymap flex-child'), # 8
+                                    ], className='flex-container')
+                            ]),
+                    dcc.Graph(figure=new_fig, className='my-graph violations'),
+                    ])
 
-                        dcc.Graph(figure=tinymap, className='tiny-map flex-child')
-                        ],
-                        className='stats-table table-container'
-                    ),
-                    dcc.Graph(figure=new_fig, className='my-graph violations')]
-                    ,
-                    )
+
+
+
+
+
+
+
+
+
+
+        # html.H5(intersection),  # this should show on top
+        #
+        #                             html.Table([
+        #                                         html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
+        #                                         html.Tr('Annual Revenue (est): ${:,}'.format(annual_violations['violations'].sum()*100)),
+        #                                         html.Tr('Crashes: {}'.format(total_crashes)),
+        #                                         html.Tr('Injuries: {}'.format(total_injuries)),
+        #                                         html.Tr('Incapacitating Injuries: {}'.format(total_incap)),
+        #                                         ], className='table-flex'
+        #                                         ),
+        #
+        #                             html.Table([
+        #                                         html.Tr('Daily Volume: {}'.format(1)),
+        #                                         html.Tr('Total Lanes: {}'.format(lanes)),
+        #                                         html.Tr('Ways: {}'.format(1)),
+        #                                         ], className='table-flex'
+        #                                         ),
+        #                             ],
+        #                         className='stats-flex table-container'
+        #                             ),
+        #                     ],
+        #                     className='flex-container'
+        #                     ),
+        #             ])
 
 
 if __name__ == '__main__':

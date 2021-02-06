@@ -3,14 +3,50 @@ import pandas as pd
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
 
 
 
 # Create Socrata client
 client = Socrata("data.cityofchicago.org", None)
 
+def stats_table(annual_violations, crashes, int_df, intersection):
+    print(int_df.columns)
+    daily_mean = annual_violations['violations'].sum() / 365
+    total_crashes = crashes['crash_record_id'].count()
+    total_injuries = crashes['injuries_total'].sum()
+    total_incap = crashes['injuries_incapacitating'].sum()
+    lanes = int_df[int_df['intersection'] == intersection]['total_lanes'].values[0]
+    daily_volume = int_df[int_df['intersection'] == intersection]['daily_traffic'].values[0]
+    ways = int_df[int_df['intersection'] == intersection]['way'].values[0]
+    n_cams = annual_violations['camera_id'].max()
+    table1 = html.Table([
+                    html.Tr('Mean Daily Violations: {:.2f}'.format(daily_mean)),
+                    html.Tr('Revenue: ${:,}'.format(annual_violations['violations'].sum() * 100)),
+                    html.Tr('Crashes: {}'.format(total_crashes)),
+                    html.Tr('Injuries: {}'.format(total_injuries)),
+                    html.Tr('Incapacitating Injuries: {}'.format(total_incap)),],
+                    className='table-flex'
+                     )
 
-def get_tinymap(latitude, longitude):
+    table2 = html.Table([
+                        html.Tr('Daily Volume: {:,}'.format(daily_volume)),
+                        html.Tr('Total Lanes: {}'.format(lanes)),
+                        html.Tr('Ways: {}'.format(ways)),
+                        html.Tr('N Cameras: {}'.format(n_cams))
+                        ], className='table-flex'
+                        )
+
+    return table1, table2
+
+
+def get_tinymap(int_df, intersection):
+    # make the tiny map
+    latitude = int_df[int_df['intersection'] == intersection]['lat'].values[0]
+    longitude = int_df[int_df['intersection'] == intersection]['long'].values[0]
     print('tinymap', latitude, longitude)
     fig = px.scatter_mapbox(lat=[latitude],
                             lon=[longitude],
@@ -44,22 +80,25 @@ def get_violations(intersection, start_date, today_str, int_chars):
                          where='''violation_date BETWEEN "{}" AND "{}"
                                     AND intersection = "{}"'''.format(start_date, today_str, intersection),
                          order='violation_date',
+                         limit=100000,
                          )
     print('violations data loaded')
+
     # Convert to pandas DataFrame
     results_df = pd.DataFrame.from_records(red_cam)
+
     results_df['violations'] = results_df['violations'].astype(int)
+    results_df['violations'] = results_df['violations'].fillna(0)
 
     n_cams = len(results_df['camera_id'].unique())
     results_df['camera_id'] = results_df.camera_id.apply(lambda x: n_cams)
-    results_df['violations'] = results_df['violations'].fillna(0)
     results_df['latitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['lat'])
     results_df['longitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['long'])
 
-    #results_df['violation_date'] = pd.DatetimeIndex(results_df.violation_date).strftime("%Y-%m-%d")
+    results_df['violation_date'] = pd.DatetimeIndex(results_df.violation_date).strftime("%Y-%m-%d")
 
 
-    results_df = results_df.groupby(['violation_date', 'latitude', 'longitude']).agg({'violations':'sum'}).reset_index()
+    results_df = results_df.groupby(['violation_date', 'latitude', 'longitude', 'camera_id']).agg({'violations':'sum'}).reset_index()
     results_df['MA5'] = results_df.violations.rolling(5).mean()
     results_df['date'] = pd.to_datetime(results_df['violation_date'])
     results_df['weekday'] = results_df['date'].apply(lambda x: x.strftime('%A'))
@@ -91,21 +130,29 @@ def get_crashes(intersection, start_date, today_str, int_chars):
                                                int_chars[intersection]['long'] - box_long,
                                                int_chars[intersection]['long'] + box_long,
                                                ),
-                            limit=10000,
+                            limit=100000,
                             )
 
     results_df = pd.DataFrame.from_records(crash_data)  # Convert to pandas DataFrame
 
     print('crash data loaded')
-    results_df['crash_date'] = pd.DatetimeIndex(results_df.crash_date).strftime("%Y-%m-%d")
+    #results_df['crash_date'] = pd.DatetimeIndex(results_df.crash_date).strftime("%Y-%m-%d")
     #results_df['month'] = results_df.apply(lambda x: x.month)
     #results_df['year'] = results_df.apply(lambda x: x.year)
     results_df['injuries_total'] = results_df['injuries_total'].astype(int)
     results_df['injuries_incapacitating'] = results_df['injuries_incapacitating'].astype(int)
 
-    results_df = results_df.groupby('crash_date').agg({'crash_record_id':'count', 'injuries_total':'sum', 'injuries_incapacitating':'sum'}).reset_index()
+    #results_df['first_crash_type'] = results_df.groupby('crash_date', as_index=False)[['first_crash_type']].aggregate(lambda x: list(x)))
 
 
+    results_df = results_df.groupby('crash_date').agg({'crash_record_id':'count',
+                                                       'injuries_total':'sum',
+                                                       'injuries_incapacitating':'sum',
+                                                       'first_crash_type': lambda x: list(x),
+                                                       'weather_condition': lambda x: list(x),
+                                                       'lighting_condition': lambda x: list(x),
+                                                       'damage': lambda x: list(x),
+                                                       }).reset_index()
 
     #results_df['violation_date'] = pd.to_datetime(results_df['violation_date'])
     #results_df['month'] = results_df['violation_date'].apply(lambda x: x.month)
@@ -179,6 +226,35 @@ def load_crashes(start_date, today_str):
     # Convert to pandas DataFrame
     results_df = pd.DataFrame.from_records(crash_data)
     return results_df
+
+
+def look_up_roads(road_list, daily_traffic):
+    '''
+    Look up function to get the values and return the total
+            Parameters:
+                roads (list): road segment list for intersection
+            Returns:
+                total (int): combined traffic volume of every road in roads list.
+    '''
+    total = 0
+    for road in road_list:
+        count = daily_traffic[daily_traffic['traffic_volume_count_location_address']==road]['total_passing_vehicle_volume'].values[0]
+        total += int(count)
+    return total
+
+
+
+
+def add_traffic(int_df):
+    daily_traffic = client.get("pfsx-4n4m",
+                               limit=2000,
+                               )
+
+    daily_traffic = pd.DataFrame.from_records(daily_traffic)  # Convert to pandas DataFrame
+    int_df['daily_traffic'] = int_df['roads'].apply(lambda x: look_up_roads(x, daily_traffic))
+
+    return int_df
+
 
 if __name__=='__main__':
     client = Socrata("data.cityofchicago.org", None)

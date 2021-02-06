@@ -1,37 +1,42 @@
 
+
+
 .flex-container {
     display: flex;
+    /*border: 2px dashed red; */
 }
+
+
 
 .flex-child {
     flex: 1;
-    border: 2px solid black;
-    padding:10px;
-}
-.table-container {
-    display: flex;
+    /*border: 2px solid black;*/
+    padding:5px;
 }
 
-.table-flex {
-    flex: 1;
-    padding:10px;
+.flex2 {
+    flex: 2;
 }
+
 
 tr {
     font-size: 0.6em;
 }
 
-.left {
-    flex: 2;
-
-}
-table {
-    margin: 10px;
+.tinymap{
+    border: 2px solid black;
 }
 
-.tiny-map {
-    flex: 1;
-
+table{
+    margin-left:20px;
 }
 
 
+
+#mapstyle-val {
+    width:200px;
+}
+
+#timeframe-val {
+    width:200px;
+}
