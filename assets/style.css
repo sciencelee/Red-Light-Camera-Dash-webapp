@@ -10,7 +10,7 @@
 
 .flex-child {
     flex: 1;
-    vw:100%;
+
     /*border: 2px solid black;*/
     padding:5px;
 }
@@ -21,7 +21,7 @@
 
 
 tr {
-    font-size: 0.6em;
+    font-size: 1.3vw;
 }
 
 .tinymap{
