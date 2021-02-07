@@ -298,6 +298,7 @@ def update_map(intersection, time_delta):
 
     new_fig.add_trace(go.Scatter(x=annual_violations['violation_date'],
                                  y=annual_violations['MA5'],
+
                                  mode='lines',
                                  hoverinfo='skip',
                                  name='5 day moving avg.',
@@ -317,10 +318,12 @@ def update_map(intersection, time_delta):
                                 name='Crashes',
                                 customdata=crashes[['crash_date', 'first_crash_type', 'injuries_total', 'weather_condition', 'damage']],
                                 marker=dict(
-                                     color='orchid',
-                                     size=8,
+                                    symbol='hexagram',
+
+                                    color='gold',
+                                     size=10,
                                      line=dict(
-                                            color='darkorchid',
+                                            color='red',
                                             width=1
                                               )
                                         ),

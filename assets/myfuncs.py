@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -22,7 +24,7 @@ def stats_table(annual_violations, crashes, int_df, intersection):
     lanes = int_df[int_df['intersection'] == intersection]['total_lanes'].values[0]
     daily_volume = int_df[int_df['intersection'] == intersection]['daily_traffic'].values[0]
     ways = int_df[int_df['intersection'] == intersection]['way'].values[0]
-    n_cams = annual_violations['camera_id'].max()
+    n_cams = annual_violations['n_cams'].min()
     table1 = html.Table([
                     html.Tr('Mean Daily Violations: {:.1f}'.format(daily_mean)),
                     html.Tr('Revenue: ${:,}'.format(annual_violations['violations'].sum() * 100)),
@@ -80,7 +82,7 @@ def get_violations(intersection, start_date, today_str, int_chars):
                          where='''violation_date BETWEEN "{}" AND "{}"
                                     AND intersection = "{}"'''.format(start_date, today_str, intersection),
                          order='violation_date',
-                         limit=100000,
+                         limit=1000000,
                          )
     print('violations data loaded')
 
@@ -91,14 +93,16 @@ def get_violations(intersection, start_date, today_str, int_chars):
     results_df['violations'] = results_df['violations'].fillna(0)
 
     n_cams = len(results_df['camera_id'].unique())
-    results_df['camera_id'] = results_df.camera_id.apply(lambda x: n_cams)
+    print("NCAMS", n_cams)
+
+    results_df['n_cams'] = results_df.camera_id.apply(lambda x: n_cams)
     results_df['latitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['lat'])
     results_df['longitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['long'])
 
     results_df['violation_date'] = pd.DatetimeIndex(results_df.violation_date).strftime("%Y-%m-%d")
 
 
-    results_df = results_df.groupby(['violation_date', 'latitude', 'longitude', 'camera_id']).agg({'violations':'sum'}).reset_index()
+    results_df = results_df.groupby(['violation_date', 'latitude', 'longitude', 'n_cams']).agg({'violations':'sum'}).reset_index()
     results_df['MA5'] = results_df.violations.rolling(5).mean()
     results_df['date'] = pd.to_datetime(results_df['violation_date'])
     results_df['weekday'] = results_df['date'].apply(lambda x: x.strftime('%A'))
