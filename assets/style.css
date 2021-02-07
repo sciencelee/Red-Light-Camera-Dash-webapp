@@ -10,6 +10,7 @@
 
 .flex-child {
     flex: 1;
+    vw:100%;
     /*border: 2px solid black;*/
     padding:5px;
 }
