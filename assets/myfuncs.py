@@ -26,7 +26,7 @@ def stats_table(annual_violations, crashes, int_df, intersection):
     ways = int_df[int_df['intersection'] == intersection]['way'].values[0]
     n_cams = annual_violations['n_cams'].min()
     table1 = html.Table([
-                    html.Tr('Mean Daily Violations: {:.1f}'.format(daily_mean)),
+                    html.Tr('Mean Violations/Day: {:.1f}'.format(daily_mean)),
                     html.Tr('Revenue: ${:,}'.format(annual_violations['violations'].sum() * 100)),
                     html.Tr('Crashes: {}'.format(total_crashes)),
                     html.Tr('Injuries: {}'.format(total_injuries)),
@@ -50,13 +50,17 @@ def get_tinymap(int_df, intersection):
     latitude = int_df[int_df['intersection'] == intersection]['lat'].values[0]
     longitude = int_df[int_df['intersection'] == intersection]['long'].values[0]
     print('tinymap', latitude, longitude)
-    fig = px.scatter_mapbox(lat=[latitude],
+
+    fig = px.scatter_mapbox(
+                            lat=[latitude],
                             lon=[longitude],
                             zoom=16,
                             center=dict(
                                 lat=latitude,
                                 lon=longitude,
-                            )
+                                ),
+
+                            #config = {'staticPlot': True},
                             )
 
     fig.update_layout(mapbox_style="open-street-map",
@@ -65,7 +69,7 @@ def get_tinymap(int_df, intersection):
                                               b=0,  # bottom margin
                                               t=0,  # top margin
                                               ),
-                      )
+                    )
     return fig
 
 def get_violations(intersection, start_date, today_str, int_chars):
