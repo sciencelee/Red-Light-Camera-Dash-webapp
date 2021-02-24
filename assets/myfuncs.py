@@ -26,7 +26,7 @@ def stats_table(annual_violations, crashes, int_df, intersection):
     ways = int_df[int_df['intersection'] == intersection]['way'].values[0]
     n_cams = annual_violations['n_cams'].min()
     table1 = html.Table([
-                    html.Tr('Mean Violations/Day: {:.1f}'.format(daily_mean)),
+                    html.Tr('Violations/Day: {:.1f}'.format(daily_mean)),
                     html.Tr('Revenue: ${:,}'.format(annual_violations['violations'].sum() * 100)),
                     html.Tr('Crashes: {}'.format(total_crashes)),
                     html.Tr('Injuries: {}'.format(total_injuries)),
