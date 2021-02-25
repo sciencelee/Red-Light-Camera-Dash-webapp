@@ -15,9 +15,9 @@ from dash.dependencies import Input, Output
 # Create Socrata client
 client = Socrata("data.cityofchicago.org", None)
 
-def stats_table(annual_violations, crashes, int_df, intersection):
+def stats_table(annual_violations, crashes, int_df, intersection, total_days):
     print(int_df.columns)
-    daily_mean = annual_violations['violations'].sum() / 365
+    daily_mean = annual_violations['violations'].sum() / total_days
     total_crashes = crashes['crash_record_id'].count()
     total_injuries = crashes['injuries_total'].sum()
     total_incap = crashes['injuries_incapacitating'].sum()

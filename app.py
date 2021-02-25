@@ -33,8 +33,14 @@ today=datetime.today()
 one_mos_ago = today - relativedelta(month=1) # for testing
 one_mos_ago = "{}-{}-{}T00:00:00.000".format(one_mos_ago.year, one_mos_ago.month, one_mos_ago.day)
 
-six_mos_ago = today - relativedelta(180)
+six_mos_ago = today - relativedelta(months=6)
 six_mos_ago = "{}-{}-{}T00:00:00.000".format(six_mos_ago.year, six_mos_ago.month, six_mos_ago.day)  #"violation_date": "2014-07-01T00:00:00.000",
+
+three_mos_ago = today - relativedelta(months=3)
+three_mos_ago = "{}-{}-{}T00:00:00.000".format(three_mos_ago.year, three_mos_ago.month, three_mos_ago.day)  #"violation_date": "2014-07-01T00:00:00.000",
+
+
+
 #two_year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 2, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 year_ago_today = "{}-{}-{}T00:00:00.000".format(today.year - 1, today.month, today.day)  #"violation_date": "2014-07-01T00:00:00.000",
 
@@ -42,7 +48,8 @@ today_str = "{}-{}-{}T00:00:00.000".format(today.year, today.month, today.day)  
 
 
 # LOAD MY DATA
-results_df = load_map_cams(one_mos_ago, today_str)
+results_df = load_map_cams(six_mos_ago, one_mos_ago)  # this determines data used for my main map
+
 results_df['latitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['lat'])
 results_df['longitude'] = results_df['intersection'].apply(lambda x: int_chars[x]['long'])
 
@@ -54,40 +61,29 @@ results_df['longitude'] = results_df['intersection'].apply(lambda x: int_chars[x
 
 
 df_plot = results_df[['intersection', 'violations', 'latitude', 'longitude']]
-#df_plot = results_df.groupby(['camera_id'])['violations'].sum().reset_index()
+df_plot['violations_per_day'] = df_plot['violations'] / 151  # 5mos.  I don't use current because there data may not be in db yet
 
-# df_plot['latitude'] = df_plot['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['latitude'].mode())
-# print('lat')
-# df_plot['longitude'] = df_plot['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['longitude'].mode())
-# print('long')
-# df_plot['intersection']= df_plot['camera_id'].apply(lambda x: results_df[results_df['camera_id']==x]['intersection'].mode())
-# print('intersection')
-
-# fig = px.scatter_geo(results_df.groupby('camera_id').sum(), locations="iso_alpha",
-#                      color="violations", # which column to use to set the color of markers
-#                      #hover_name="country", # column added to hover information
-#                      size="violations", # size of markers
-#                      projection="natural earth")
-
-# px.scatter_mapbox?
 df_plot['size']=df_plot['violations'].apply(lambda x: 8)
+
+
+
 
 fig = px.scatter_mapbox(df_plot,
                         lat="latitude",
                         lon="longitude",
-                        color='violations',
+                        color='violations_per_day',
                         hover_name='intersection',
                         # label=['lat','long','violations'],
                         color_continuous_scale='rdylgn_r',
                         #color_continuous_scale='Plotly3',
-                        range_color=[df_plot['violations'].quantile(0), df_plot['violations'].quantile(0.95)],
+                        range_color=[df_plot['violations_per_day'].quantile(0), df_plot['violations_per_day'].quantile(0.97)],
                         # center={'lat':41.975605, 'lon': -87.731670},
                         zoom=9.6,
                         opacity=0.8,
                         height=600,
-                        custom_data=['intersection', 'violations'],  #send in what you like this way (behind the scenes, sneaky!)
+                        custom_data=['intersection', 'violations_per_day'],  #send in what you like this way (behind the scenes, sneaky!)
                         size='size',
-                        hover_data={'size':False, 'intersection':True, 'violations': True, 'longitude': ':.3f', 'latitude': ':.3f'},
+                        hover_data={'size':False, 'intersection':True, 'violations_per_day': ':.1f', 'longitude': ':.3f', 'latitude': ':.3f'},
                         size_max=8,
                         )
 
@@ -356,7 +352,16 @@ def update_map(intersection, time_delta):
     tinymap = get_tinymap(int_df, intersection)
 
     #new_fig.update_traces
-    table1, table2 = stats_table(annual_violations, crashes, int_df, intersection)
+    if time_delta == '2y':
+        total_days = 365 * 2
+    elif time_delta == '1y':
+        total_days = 365
+    elif time_delta == '6m':
+        total_days = 182
+    else:
+        total_days = 91
+
+    table1, table2 = stats_table(annual_violations, crashes, int_df, intersection, total_days)
 
 
     # Now return my div containing my graph (dcc.Graph) along with my table data
