@@ -6,7 +6,7 @@ This is a companion web app for my red light camera project. https://github.com/
 
 It is a single page Dash app.
 
-![](https://github.com/sciencelee/Red-Light-Camera-Dash-webapp/blob/master/assets/web_app_screenshot.png)
+![rlc.sciencelee.com](https://github.com/sciencelee/Red-Light-Camera-Dash-webapp/blob/master/assets/web_app_screenshot.png)
 
 ### On the right side: 
 - interactive map of all red light intersections in Chicago.
