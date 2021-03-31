@@ -3,7 +3,7 @@ This web app is created to explore red light camera intersections in Chicago.  I
 
 # Description
 The web app is live at: http://rlc.sciencelee.com
-This is a companion web app for my red light camera project. https://github.com/sciencelee/chicago_rlc
+This is a companion web app for ![my red light camera project](https://github.com/sciencelee/chicago_rlc)
 
 It is a single page Dash app.
 
