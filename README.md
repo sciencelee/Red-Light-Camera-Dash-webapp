@@ -2,11 +2,15 @@
 red light camera app
 
 # Description
+The web app is live at: http://rlc.sciencelee.com
 This is a companion web app for my red light camera project. https://github.com/sciencelee/chicago_rlc
 
 It is a single page Dash app.
 
-![rlc.sciencelee.com](https://github.com/sciencelee/Red-Light-Camera-Dash-webapp/blob/master/assets/web_app_screenshot.png)
+<a href='http://rlc.sciencelee.com'>
+  <img src='https://github.com/sciencelee/Red-Light-Camera-Dash-webapp/blob/master/assets/web_app_screenshot.png'></img>
+</a>
+
 
 ### On the right side: 
 - interactive map of all red light intersections in Chicago.
