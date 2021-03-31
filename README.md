@@ -1,5 +1,5 @@
 # Red Light Camera Dash Webapp
-red light camera app
+This web app is created to explore red light camera intersections in Chicago.  It plots daily violations, crashes, crash statistics, locations, and intersection characteristics in a beautiful and easy to use dashboard.  
 
 # Description
 The web app is live at: http://rlc.sciencelee.com
